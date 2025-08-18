@@ -14,6 +14,7 @@ Notes:
     - Verifies that expected extensions are attached to the Flask app.
 """
 
+import pytest
 from app import create_app
 
 
@@ -41,8 +42,8 @@ def test_create_app_initializes():
 # ----------------------------------------------------------------------
 def test_create_app_with_invalid_config_key():
     """
-    create_app with a nonexistent config should still return a valid app.
-    (Note: get_config currently defaults instead of raising an exception.)
+    create_app with a nonexistent config should raise a RuntimeError,
+    since no SQLALCHEMY_DATABASE_URI is configured.
     """
-    app = create_app("nonexistent_config")
-    assert app is not None
+    with pytest.raises(RuntimeError):
+        create_app("nonexistent_config")
