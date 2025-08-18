@@ -11,6 +11,7 @@ from faker import Faker
 from passlib.hash import bcrypt
 from app.extensions import db
 from app.models import User, Merchant, Customer, Order
+import datetime as datetime
 
 fake = Faker()
 
@@ -98,4 +99,4 @@ class OrderFactory(BaseFactory):
     status = factory.Iterator(["created", "paid", "shipped", "delivered", "cancelled"])
     currency = "BRL"
     total_amount = factory.LazyFunction(lambda: fake.pydecimal(left_digits=3, right_digits=2, positive=True))
-    created_at = factory.LazyAttribute(lambda _: fake.date_time_this_year())
+    created_at = factory.LazyFunction(datetime.utcnow)
