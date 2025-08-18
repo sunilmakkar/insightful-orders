@@ -1,0 +1,208 @@
+<!--
+alerts.html — Live Alerts WebSocket Client for Insightful-Orders
+
+Responsibilities:
+  - Provide a simple web UI to connect to the alerts WebSocket endpoint.
+  - Allow configuration of protocol (ws/wss), host:port, path, and JWT.
+  - Auto-reconnect option with 5s backoff.
+  - Display incoming alert messages in a scrollable log with system/ok/error tags.
+
+Usage:
+  1. Open this file in a browser.
+  2. Enter a valid JWT and server details (defaults to localhost:5050).
+  3. Click "Connect" to start receiving alert messages in real time.
+
+Notes:
+  - JSON messages are pretty-printed if possible.
+  - Auth is appended as query parameter: ?token=<JWT>.
+  - Supports Cmd/Ctrl+Enter keyboard shortcut to reconnect.
+-->
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Insightful-Orders • Live Alerts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial; }
+    body { margin: 0; background: #0b0f14; color: #e6edf3; }
+    .wrap { max-width: 860px; margin: 32px auto; padding: 0 16px; }
+    h1 { font-size: 20px; margin: 0 0 16px; font-weight: 600; }
+    .card { background: #0f1720; border: 1px solid #1f2a37; border-radius: 12px; padding: 16px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 8px; margin-bottom: 8px; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #243244; background: #0b1220; color: #e6edf3; }
+    .btns { display: flex; gap: 8px; margin-top: 8px; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #243244; background: #132033; color: #e6edf3; cursor: pointer; }
+    button.primary { background: #1a4d8f; border-color: #1a4d8f; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .log { margin-top: 16px; height: 420px; overflow: auto; background: #070c12; border: 1px solid #1f2a37; border-radius: 12px; padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; line-height: 1.5; }
+    .line { display: grid; grid-template-columns: 120px 1fr; gap: 8px; padding: 6px 8px; border-bottom: 1px dotted #1f2a37; }
+    .tag { color: #9ca3af; }
+    .ok { color: #22c55e; } .err { color: #ef4444; } .sys { color: #60a5fa; }
+    .pill { font-size: 11px; padding: 2px 8px; border: 1px solid #1f2a37; border-radius: 999px; background: #0b1220; color: #cbd5e1; }
+    .footer { margin-top: 10px; font-size: 12px; color: #64748b; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Live Alerts (WebSocket)</h1>
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Protocol</label>
+          <select id="proto">
+            <option value="ws">ws</option>
+            <option value="wss">wss</option>
+          </select>
+        </div>
+        <div>
+          <label>Host:Port</label>
+          <input id="host" placeholder="localhost:5050" />
+        </div>
+        <div>
+          <label>Path (endpoint)</label>
+          <input id="path" value="/ws/alerts" />
+        </div>
+      </div>
+
+      <div class="row-2">
+        <div>
+          <label>JWT (access token)</label>
+          <input id="token" placeholder="eyJhbGciOi..." />
+        </div>
+        <div>
+          <label>Auto-reconnect <span class="pill">5s backoff</span></label>
+          <select id="reconnect">
+            <option value="on" selected>On</option>
+            <option value="off">Off</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button id="connect" class="primary">Connect</button>
+        <button id="disconnect" disabled>Disconnect</button>
+        <button id="clear">Clear Log</button>
+        <span id="status" class="pill">idle</span>
+      </div>
+
+      <div id="log" class="log" aria-live="polite" aria-atomic="false"></div>
+      <div class="footer">
+        Tip: If your server expects <code>/alerts/ws</code> instead, change the Path field.
+        Query auth is appended as <code>?token=&lt;JWT&gt;</code>.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Defaults derived from current page if available
+    (function initDefaults() {
+      const host = document.getElementById('host');
+      if (!host.value) {
+        host.value = location.host || 'localhost:5050';
+      }
+      const proto = document.getElementById('proto');
+      proto.value = location.protocol === 'https:' ? 'wss' : 'ws';
+    })();
+
+    const $log = document.getElementById('log');
+    const $status = document.getElementById('status');
+    const $btnConnect = document.getElementById('connect');
+    const $btnDisconnect = document.getElementById('disconnect');
+    const $btnClear = document.getElementById('clear');
+
+    let ws = null;
+    let reconnectTimer = null;
+    let reconnectDelay = 5000;
+
+    function line(kind, msg) {
+      const row = document.createElement('div');
+      row.className = 'line';
+      const tag = document.createElement('div');
+      tag.className = 'tag ' + (kind === 'ok' ? 'ok' : kind === 'err' ? 'err' : 'sys');
+      tag.textContent = kind.toUpperCase();
+      const body = document.createElement('pre');
+      body.style.margin = 0;
+      body.textContent = msg;
+      row.appendChild(tag);
+      row.appendChild(body);
+      $log.appendChild(row);
+      $log.scrollTop = $log.scrollHeight;
+    }
+
+    function setStatus(text) { $status.textContent = text; }
+
+    function buildUrl() {
+      const proto = document.getElementById('proto').value.trim();
+      const host = document.getElementById('host').value.trim() || 'localhost:5050';
+      const path = document.getElementById('path').value.trim() || '/ws/alerts';
+      const token = document.getElementById('token').value.trim();
+      const qp = token ? `?token=${encodeURIComponent(token)}` : '';
+      return `${proto}://${host}${path}${qp}`;
+    }
+
+    function connect() {
+      const url = buildUrl();
+      try { ws?.close(1000); } catch {}
+      clearTimeout(reconnectTimer);
+      line('sys', `Connecting → ${url}`);
+      setStatus('connecting…');
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        setStatus('connected');
+        $btnConnect.disabled = true;
+        $btnDisconnect.disabled = false;
+        line('ok', 'WebSocket OPEN');
+      };
+
+      ws.onmessage = (ev) => {
+        let text = ev.data;
+        // Pretty print JSON if it looks like JSON
+        try {
+          const obj = JSON.parse(text);
+          text = JSON.stringify(obj, null, 2);
+        } catch {}
+        line('ok', text);
+      };
+
+      ws.onerror = (ev) => {
+        setStatus('error');
+        line('err', `WebSocket ERROR`);
+      };
+
+      ws.onclose = (ev) => {
+        line('sys', `WebSocket CLOSE (code=${ev.code}, reason="${ev.reason || ''}")`);
+        setStatus('closed');
+        $btnConnect.disabled = false;
+        $btnDisconnect.disabled = true;
+        if (document.getElementById('reconnect').value === 'on') {
+          line('sys', `Reconnecting in ${reconnectDelay / 1000}s…`);
+          clearTimeout(reconnectTimer);
+          reconnectTimer = setTimeout(connect, reconnectDelay);
+        }
+      };
+    }
+
+    function disconnect() {
+      clearTimeout(reconnectTimer);
+      if (ws && ws.readyState <= 1) {
+        setStatus('closing…');
+        ws.close(1000, 'client close');
+      }
+    }
+
+    $btnConnect.addEventListener('click', connect);
+    $btnDisconnect.addEventListener('click', disconnect);
+    $btnClear.addEventListener('click', () => { $log.innerHTML = ''; });
+
+    // Optional: Cmd/Ctrl+Enter to (re)connect
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') connect();
+    });
+  </script>
+</body>
+</html>

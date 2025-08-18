@@ -1,0 +1,50 @@
+services: 
+  # ----------------------------------------------------------------------
+  # Flask API Service
+  # ----------------------------------------------------------------------
+  api:
+    build: .  # Build from Dockerfile in current directory
+    env_file:
+      - .env  # Load environment variables from local file
+    environment:
+      # Explicitly pass key env vars (optional since they're in .env)
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CONFIG=${CONFIG}
+      - REDIS_URL=${REDIS_URL}
+      - PYTHONPATH=/app   
+    depends_on:
+      - db     # Wait for Postgres to be healthy before starting
+      - redis  # Wait for Redis to be healthy before starting
+    ports:
+      - "5050:5000"  # Host:Container → expose API on http://localhost:5050
+    volumes:
+      - ./app/tools:/app/tools   # <-- mount your local tools folder into container
+
+  # ----------------------------------------------------------------------
+  # Postgres Database 
+  # ----------------------------------------------------------------------
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"  # Host:Container
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: insightful_orders
+    volumes:
+      - pgdata:/var/lib/postgresql/data  # Persist DB data across container restarts
+
+  # ----------------------------------------------------------------------
+  # Redis Cache
+  # ----------------------------------------------------------------------
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"  # Host:Container
+
+# ----------------------------------------------------------------------
+# Named Volumes
+# ----------------------------------------------------------------------
+volumes:
+  pgdata:  # Stores persistent Postgres data
