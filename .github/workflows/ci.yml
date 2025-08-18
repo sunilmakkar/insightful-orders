@@ -33,6 +33,7 @@ jobs:
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           export REDIS_URL=redis://localhost:6379/0
+          export JWT_SECRET_KEY=dummysecret
           pytest --maxfail=1 --disable-warnings -q
 
       # Step 5 - Log in to GitHub Container Registry
