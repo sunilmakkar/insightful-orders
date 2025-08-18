@@ -72,7 +72,7 @@ class RollingAOVResource(MethodView):
     @metrics_bp.arguments(AOVQuerySchema, location="query") 
     @metrics_bp.response(200, RollingAOVSchema)
     @jwt_required()
-    def get(self):
+    def get(self, **kwargs):
         """
         Return the Average Order Value over a rolling time window.
         Query params:
@@ -82,12 +82,12 @@ class RollingAOVResource(MethodView):
         """
         Return the Average Order Value over a rolling time window.
         """
-        window = args.get("window", "30d")                         ### CHANGED: from args instead of request.args
+        window = request.args.get("window", "30d")
         claims = get_jwt()
         merchant_id = claims.get("merchant_id")
         if not merchant_id:
             return {"message": "Missing merchant_id in token"}, 400
-        
+
         session: Session = db.session
         result = rolling_aov(session, merchant_id, window)
         return result
@@ -114,7 +114,7 @@ class RFMSchema(Schema):
 class RFMResource(MethodView):
     @metrics_bp.response(200, RFMSchema(many=True))
     @jwt_required()
-    def get(self):
+    def get(self, **kwargs):
         """
         Return Recency-Frequency-Monetary scores for all customers of this merchant.
         """
