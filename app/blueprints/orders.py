@@ -22,6 +22,7 @@ from flask import request, jsonify
 from flask_smorest import Blueprint, abort
 from flask_jwt_extended import jwt_required, get_jwt
 from sqlalchemy import select
+from marshmallow import Schema, fields
 
 from app.extensions import db
 from app.models import Customer, Order
@@ -109,10 +110,22 @@ def _get_or_create_customer(merchant_id, data):
 
 
 # ----------------------------------------------------------------------
+# Pagination Schema for Orders
+# ----------------------------------------------------------------------
+from marshmallow import Schema, fields
+
+class PaginatedOrdersSchema(Schema):
+    page = fields.Int(required=True)
+    page_size = fields.Int(required=True)
+    count = fields.Int(required=True)
+    items = fields.List(fields.Nested(OrderSchema), required=True)
+
+
+# ----------------------------------------------------------------------
 # GET /orders → List Orders (Paginated)
 # ----------------------------------------------------------------------
 @orders_bp.get("")
-@orders_bp.response(200, OrderSchema(many=True))
+@orders_bp.response(200, PaginatedOrdersSchema)
 @jwt_required()
 def list_orders():
     """
@@ -223,7 +236,7 @@ def delete_order(order_id):
     if order is None:
         abort(404)
     if order.merchant_id != merchant_id:
-        abort(403, message="Forbidden")            ### CHANGED: use abort instead of jsonify
+        abort(403, message="Forbidden")            
     db.session.delete(order)
     db.session.commit()
     return ""  
