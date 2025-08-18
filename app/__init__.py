@@ -45,6 +45,13 @@ def create_app(config_name: str = "development"):
     # Initialize Extensions
     # ------------------------------------------------------------------
     db.init_app(app)                # SQLAlchemy ORM
+
+    # ✅ Auto-create tables if using SQLite (for local/dev/demo only)
+    if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
+        with app.app_context():
+            db.create_all()
+
+            
     migrate.init_app(app, db)       # Flask-Migrate for Alembic migrations
     ma.init_app(app)                # Marshmallow for serialization/validation
     jwt.init_app(app)               # JWT authentication
