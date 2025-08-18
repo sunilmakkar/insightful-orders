@@ -58,11 +58,13 @@ def create_app(config_name: str = "development"):
     from app.blueprints.orders import orders_bp
     from app.blueprints.metrics import metrics_bp
     from app.blueprints.alerts import alerts_bp, sock
+    from app.blueprints.health import health_bp
 
     app.register_blueprint(auth_bp)      # Auth endpoints (/auth)
     app.register_blueprint(orders_bp)    # Orders endpoints (/orders)
     app.register_blueprint(metrics_bp)   # Metrics endpoints (/metrics)
     app.register_blueprint(alerts_bp)    # Alerts endpoints (/alerts)
+    app.register_blueprint(health_bp)    # Health endpoint (/healthz) 
     sock.init_app(app)                   # bind WebSocket routes to this app
 
     # ------------------------------------------------------------------
