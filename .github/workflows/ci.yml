@@ -28,10 +28,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-            # Step 4 - Run tests
+        # Step 4 - Run tests
       - name: Run pytest
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
+          export REDIS_URL=redis://localhost:6379/0
           pytest --maxfail=1 --disable-warnings -q
 
       # Step 5 - Log in to GitHub Container Registry
