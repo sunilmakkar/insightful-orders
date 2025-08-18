@@ -38,8 +38,16 @@ alerts_bp = Blueprint(
 sock = Sock()
 
 # ----------------------------------------------------------------------
-# Response Schemas
+# Request & Response Schemas
 # ----------------------------------------------------------------------
+class AlertRuleCreateSchema(Schema): 
+    """Schema for creating a new alert rule (merchant_id injected from JWT)."""
+    metric = fields.Str(required=True, example="orders_per_min")
+    operator = fields.Str(required=True, example=">=")
+    threshold = fields.Float(required=True, example=100.0)
+    time_window_s = fields.Int(required=True, example=300)
+    is_active = fields.Bool(required=False, example=True)
+
 class AlertRuleListSchema(Schema):
     """Paginated list wrapper for alert rules."""
     page = fields.Int(required=True, metadata={"example": 1})
@@ -52,9 +60,10 @@ class AlertRuleListSchema(Schema):
 # Create Alert Rule
 # ----------------------------------------------------------------------
 @alerts_bp.route("", methods=["POST"])
+@alerts_bp.arguments(AlertRuleCreateSchema)  
 @alerts_bp.response(201, AlertRuleSchema)
 @jwt_required()
-def create_alert_rule():
+def create_alert_rule(data):
     """
     Create a new alert rule for the authenticated merchant.
 

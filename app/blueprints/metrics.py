@@ -29,6 +29,30 @@ from app.utils.helpers import parse_monthish
 # ----------------------------------------------------------------------
 metrics_bp = Blueprint("metrics", __name__, url_prefix="/metrics")
 
+
+# ----------------------------------------------------------------------
+# Query Param Schemas
+# ----------------------------------------------------------------------
+### ADDED — schemas so query params appear in OpenAPI
+class AOVQuerySchema(Schema):
+    window = fields.Str(
+        required=False,
+        load_default="30d",
+        metadata={"description": "Rolling window (30d, 12w, 6m, 1y)", "example": "30d"}
+    )
+
+class CohortsQuerySchema(Schema):
+    from_ = fields.Str(
+        data_key="from",
+        required=False,
+        metadata={"description": "Start month YYYY-MM or YYYY-MM-DD"}
+    )
+    to = fields.Str(
+        required=False,
+        metadata={"description": "End month YYYY-MM or YYYY-MM-DD"}
+    )
+
+
 # ----------------------------------------------------------------------
 # Response Schema: /aov
 # ----------------------------------------------------------------------
@@ -45,6 +69,7 @@ class RollingAOVSchema(Schema):
 # ----------------------------------------------------------------------
 @metrics_bp.route("/aov")
 class RollingAOVResource(MethodView):
+    @metrics_bp.arguments(AOVQuerySchema, location="query") 
     @metrics_bp.response(200, RollingAOVSchema)
     @jwt_required()
     def get(self):
@@ -53,9 +78,11 @@ class RollingAOVResource(MethodView):
         Query params:
             window (str) - e.g., '30d', '12w', '6m', '1y'
         """
-        window = request.args.get("window", "30d")
-
-        # JWT payload contains merchant_id from your auth setup
+    def get(self, args):                                           ### CHANGED: now accepts args
+        """
+        Return the Average Order Value over a rolling time window.
+        """
+        window = args.get("window", "30d")                         ### CHANGED: from args instead of request.args
         claims = get_jwt()
         merchant_id = claims.get("merchant_id")
         if not merchant_id:
@@ -64,6 +91,7 @@ class RollingAOVResource(MethodView):
         session: Session = db.session
         result = rolling_aov(session, merchant_id, window)
         return result
+
     
 # ----------------------------------------------------------------------
 # Response Schema: /rfm
@@ -140,9 +168,10 @@ class CohortMatrixSchema(Schema):
 # ----------------------------------------------------------------------
 @metrics_bp.route("/cohorts")
 class CohortsResource(MethodView):
+    @metrics_bp.arguments(CohortsQuerySchema, location="query")    
     @metrics_bp.response(200, CohortMatrixSchema)
     @jwt_required()
-    def get(self):
+    def get(self, args):
         """
         Return monthly cohort retention matrix.
 
@@ -155,8 +184,8 @@ class CohortsResource(MethodView):
         if not merchant_id:
             return {"message": "Missing merchant_id in token"}, 400
 
-        start_q = parse_monthish(request.args.get("from"))
-        end_q = parse_monthish(request.args.get("to"))
+        start_q = parse_monthish(args.get("from"))                 ### CHANGED: from args
+        end_q = parse_monthish(args.get("to"))
 
         session: Session = db.session
         result = monthly_cohorts(session, merchant_id, start=start_q, end=end_q)

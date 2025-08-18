@@ -18,7 +18,8 @@ Security:
     - Merchant context derived from JWT claims and enforced per request.
 """
 
-from flask import Blueprint, request, jsonify, abort
+from flask import request, jsonify
+from flask_smorest import Blueprint, abort
 from flask_jwt_extended import jwt_required, get_jwt
 from sqlalchemy import select
 
@@ -31,7 +32,7 @@ from app.utils.helpers import paginate
 # ----------------------------------------------------------------------
 # Blueprint Setup & Schemas
 # ----------------------------------------------------------------------
-orders_bp = Blueprint("orders", __name__, url_prefix="/orders")
+orders_bp = Blueprint("orders", __name__, url_prefix="/orders", description="Operations on orders (JWT required)")
 
 order_schema = OrderSchema()
 customer_schema = CustomerSchema()
@@ -111,6 +112,7 @@ def _get_or_create_customer(merchant_id, data):
 # GET /orders → List Orders (Paginated)
 # ----------------------------------------------------------------------
 @orders_bp.get("")
+@orders_bp.response(200, OrderSchema(many=True))
 @jwt_required()
 def list_orders():
     """
@@ -123,13 +125,15 @@ def list_orders():
     """
     merchant_id = _merchant_id_from_jwt()
     q = Order.query.filter_by(merchant_id=merchant_id).order_by(Order.created_at.desc())
-    return jsonify(paginate(q, order_schema))
+    return paginate(q, order_schema)
 
 
 # ----------------------------------------------------------------------
 # POST /orders — Bulk Create Orders
 # ----------------------------------------------------------------------
 @orders_bp.post("")
+@orders_bp.arguments(OrderBulkSchema)
+@orders_bp.response(201, OrderSchema(many=True))
 @jwt_required()
 def bulk_create_orders():
     """
@@ -181,6 +185,7 @@ def bulk_create_orders():
 # GET /orders/<order_id> → Retrieve Single Order
 # ----------------------------------------------------------------------
 @orders_bp.get("/<int:order_id>")
+@orders_bp.response(200, OrderSchema) 
 @jwt_required()
 def retrieve_order(order_id):
     """
@@ -194,14 +199,15 @@ def retrieve_order(order_id):
     if order is None:
         abort(404)
     if order.merchant_id != merchant_id:
-        return jsonify({"message": "Forbidden"}), 403
-    return order_schema.jsonify(order)
+        abort(403, message="Forbidden")            
+    return order 
 
 
 # ----------------------------------------------------------------------
 # DELETE /orders/<order_id> → Delete Single Order
 # ----------------------------------------------------------------------
 @orders_bp.delete("/<int:order_id>")
+@orders_bp.response(204)                           
 @jwt_required()
 def delete_order(order_id):
     """
@@ -217,8 +223,8 @@ def delete_order(order_id):
     if order is None:
         abort(404)
     if order.merchant_id != merchant_id:
-        return jsonify({"message": "Forbidden"}), 403
+        abort(403, message="Forbidden")            ### CHANGED: use abort instead of jsonify
     db.session.delete(order)
     db.session.commit()
-    return "", 204
+    return ""  
 
