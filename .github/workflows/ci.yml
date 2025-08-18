@@ -28,9 +28,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      # Step 4 - Run tests
+            # Step 4 - Run tests
       - name: Run pytest
-        run: pytest --maxfail=1 --disable-warnings -q
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
+          pytest --maxfail=1 --disable-warnings -q
 
       # Step 5 - Log in to GitHub Container Registry
       - name: Log in to GHCR
