@@ -23,5 +23,5 @@ pytest-cov
 coverage-badge
 bcrypt==4.0.1
 passlib[bcrypt]>=1.7.4
-
+gunicorn==21.2.0
 

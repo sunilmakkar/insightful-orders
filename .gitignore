@@ -9,6 +9,7 @@ build/
 
 # Environments
 .env
+.env.prod
 .venv/
 venv/
 
