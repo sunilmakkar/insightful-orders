@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  # ----------------------------------------------------------------------
+  # Flask API (Gunicorn, using GHCR image)
+  # ----------------------------------------------------------------------
+  api:
+    image: ghcr.io/sunilmakkar/insightful-orders:latest
+    env_file:
+      - .env.prod
+    environment:
+      - CONFIG=production
+      - PYTHONPATH=/app
+      - API_BASE=http://api:5000
+      - WS_BASE=ws://api:5000/ws/alerts
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "5050:5000"  # Expose API on http://localhost:5050
+    command: >
+      gunicorn -b 0.0.0.0:5000 "app:create_app('production')" --workers 4 --threads 2 --timeout 60
+
+  # ----------------------------------------------------------------------
+  # Postgres Database
+  # ----------------------------------------------------------------------
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # ----------------------------------------------------------------------
+  # Redis Cache
+  # ----------------------------------------------------------------------
+  redis:
+    image: redis:7
+
+# ----------------------------------------------------------------------
+# Named Volumes
+# ----------------------------------------------------------------------
+volumes:
+  pgdata:
