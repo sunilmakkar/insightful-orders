@@ -27,7 +27,7 @@ from app.utils.helpers import parse_monthish
 # ----------------------------------------------------------------------
 # Blueprint Setup
 # ----------------------------------------------------------------------
-metrics_bp = Blueprint("metrics", __name__, url_prefix="/metrics")
+metrics_bp = Blueprint("metrics", __name__, url_prefix="/metrics", description="Analytics endpoints for customer insights (AOV, RFM, Cohorts).")
 
 
 # ----------------------------------------------------------------------
