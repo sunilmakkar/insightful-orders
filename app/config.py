@@ -85,8 +85,13 @@ class TestConfig(BaseConfig):
     - TESTING flag can toggle test-only behaviors in Flask extensions.
     """
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    REDIS_URL = "redis://localhost:6379/0" 
     TESTING = True
     ALERTS_SCHEDULER_ENABLED = False
+
+    JWT_SECRET_KEY = "super-secret-test-key"
+    SECRET_KEY = "super-secret-test-key"
+
 
 
 # ----------------------------------------------------------------------
@@ -106,10 +111,14 @@ class ProdConfig(BaseConfig):
 # ----------------------------------------------------------------------
 # Get Config
 # ----------------------------------------------------------------------
-def get_config(name):
-    """Return a config class by environment name."""
-    return {
+def get_config(name: str):
+    """Return a config class by environment name, or raise if invalid."""
+    config_map = {
         "development": DevConfig,
         "testing": TestConfig,
-        "production": ProdConfig,
-    }.get(name, DevConfig)
+        "production": ProdConfig
+    }
+    try:
+        return config_map[name]
+    except KeyError:
+        raise RuntimeError(f"Invalid config name: {name}")

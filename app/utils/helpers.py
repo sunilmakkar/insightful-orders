@@ -51,12 +51,12 @@ def paginate(query, serializer, default_page_size=20, max_page_size=100):
     # Apply limit/offset to the query for pagination
     items = query.limit(page_size).offset((page - 1) * page_size).all()
 
-    # Return pagination metadata + serialized data
+    # Return pagination metadata + raw data
     return {
         "page": page,
         "page_size": page_size,
-        "items": serializer.dump(items, many=True),  # serialize the query results
-        "count": query.order_by(None).count()  # total count without pagination
+        "items": items,
+        "count": query.order_by(None).count()
     }
 
 # ----------------------------------------------------------------------

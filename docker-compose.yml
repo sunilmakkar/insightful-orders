@@ -13,13 +13,16 @@ services:
       - CONFIG=${CONFIG}
       - REDIS_URL=${REDIS_URL}
       - PYTHONPATH=/app   
+      - API_BASE=http://api:5000
+      - WS_BASE=ws://api:5000/ws/alerts
+      
     depends_on:
       - db     # Wait for Postgres to be healthy before starting
       - redis  # Wait for Redis to be healthy before starting
     ports:
       - "5050:5000"  # Host:Container → expose API on http://localhost:5050
     volumes:
-      - ./app/tools:/app/tools   # <-- mount your local tools folder into container
+      - .:/app
 
   # ----------------------------------------------------------------------
   # Postgres Database 

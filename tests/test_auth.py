@@ -39,8 +39,8 @@ def test_register_user(client):
 def test_login_user(client):
     """POST /auth/login with valid credentials returns access+refresh tokens."""
     res = client.post("/auth/login", json={
-        "email": "test@example.com",
-        "password": "test1234"
+        "email": "admin@example.com",
+        "password": "yourpassword"
     })
     assert res.status_code == 200
     # Expect both access and refresh tokens in the payload
@@ -53,7 +53,7 @@ def test_login_user(client):
 def test_login_invalid_credentials(client):
     """POST /auth/login with invalid credentials returns 401."""
     res = client.post("/auth/login", json={
-        "email": "test@example.com",
+        "email": "admin@example.com",
         "password": "wrongpass"
     })
     assert res.status_code == 401
@@ -77,7 +77,7 @@ def test_me_route_with_token(client, access_token):
     )
     data = res.get_json()
     assert res.status_code == 200, res.get_json()
-    assert data["email"] == "test@example.com"
+    assert data["email"] == "admin@example.com"
     assert data["role"] == "admin"
 
 # ----------------------------------------------------------------------
@@ -87,8 +87,8 @@ def test_refresh_token(client):
     """POST /auth/refresh with a refresh token returns a new access token."""
     # First, login to get a refresh token
     login = client.post("/auth/login", json={
-        "email": "test@example.com",
-        "password": "test1234"
+        "email": "admin@example.com",
+        "password": "yourpassword" 
     })
     refresh_token = login.get_json()["refresh_token"]
 

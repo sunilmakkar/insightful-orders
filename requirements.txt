@@ -21,4 +21,7 @@ simple-websocket==1.0.0
 websockets==12.0
 pytest-cov
 coverage-badge
+bcrypt==4.0.1
+passlib[bcrypt]>=1.7.4
+
 

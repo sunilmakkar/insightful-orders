@@ -41,15 +41,19 @@ def seed_demo():
     # ------------------------------------------------------------------
     # Create admin user for the demo merchant
     # ------------------------------------------------------------------
-    user = User.query.filter_by(email="admin@demo.local").first()
+    user = User.query.filter_by(email="admin@example.com").first()
     if not user:
         user = User(
             merchant_id=merchant.id,
-            email="admin@demo.local",
+            email="admin@example.com",
             role="admin",
         )
-        user.set_password("demo1234")  # hash password
+        user.set_password("yourpassword")  # hash password
         db.session.add(user)
+    else:
+        # Ensure user belongs to the DemoStore merchant
+        if user.merchant_id != merchant.id:
+            user.merchant_id = merchant.id
 
     # ------------------------------------------------------------------
     # Create demo customers

@@ -142,13 +142,20 @@ def list_orders():
 
 
 # ----------------------------------------------------------------------
+# Response schema for bulk create
+# ----------------------------------------------------------------------
+class BulkCreateResponseSchema(Schema):
+    created = fields.List(fields.Nested(OrderSchema), required=True)
+
+
+# ----------------------------------------------------------------------
 # POST /orders — Bulk Create Orders
 # ----------------------------------------------------------------------
 @orders_bp.post("")
-@orders_bp.arguments(OrderBulkSchema)
-@orders_bp.response(201, OrderSchema(many=True))
+@orders_bp.arguments(OrderBulkSchema) 
 @jwt_required()
-def bulk_create_orders():
+@orders_bp.response(201, BulkCreateResponseSchema)
+def bulk_create_orders(payload):
     """
     Bulk-create up to 500 orders for the authenticated merchant.
 
@@ -174,7 +181,6 @@ def bulk_create_orders():
     - Returns serialized list of created orders.
     """
     merchant_id = _merchant_id_from_jwt()
-    payload = bulk_schema.load(request.get_json() or {})
     created = []
 
     for item in payload["orders"]:
@@ -191,7 +197,7 @@ def bulk_create_orders():
         created.append(order)
 
     db.session.commit()
-    return jsonify({"created": order_schema.dump(created, many=True)}), 201
+    return {"created": created}, 201
 
 
 # ----------------------------------------------------------------------

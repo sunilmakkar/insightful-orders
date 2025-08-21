@@ -17,6 +17,7 @@ from app.models import Order
 # ----------------------------------------------------------------------
 def _insert_orders(db_session, merchant_id, orders):
     """Helper to bulk insert test orders."""
+    db_session.query(Order).filter_by(merchant_id=merchant_id).delete()
     for o in orders:
         db_session.add(
             Order(

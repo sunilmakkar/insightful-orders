@@ -24,7 +24,7 @@ def test_seed_demo_creates_demo_data(app):
         assert "Seeded DemoStore" in result.output
 
         merchant = Merchant.query.filter_by(name="DemoStore").first()
-        user = User.query.filter_by(email="admin@demo.local").first()
+        user = User.query.filter_by(email="admin@example.com").first()
 
         assert merchant is not None
         assert user is not None

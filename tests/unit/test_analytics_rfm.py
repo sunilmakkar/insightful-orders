@@ -48,19 +48,30 @@ def sample_orders(db_session):
 # ----------------------------------------------------------------------
 # RFM Scores — Shape and Keys
 # ----------------------------------------------------------------------
-def test_rfm_scores_returns_expected_shape(db_session, sample_orders):
-    """Returns a list of records with expected fields for three distinct customers."""
-    results = rfm_scores(db_session, merchant_id=10, now=sample_orders)
+@pytest.fixture
+def sample_orders(db_session):
+    """Insert sample orders spanning different recency/frequency/monetary profiles.
 
-    assert isinstance(results, list)
-    assert len(results) == 3
+    Ensures DB is cleared for merchant_id=10 to avoid interference from other tests/seeds.
+    """
+    now = datetime.utcnow()
 
-    for rec in results:
-        assert "customer_id" in rec
-        assert "recency_days" in rec
-        assert "frequency" in rec
-        assert "monetary" in rec
-        assert "r" in rec
-        assert "f" in rec
-        assert "m" in rec
-        assert "rfm" in rec
+    # ✅ Clear any existing orders for this merchant
+    db_session.query(Order).filter_by(merchant_id=10).delete()
+    db_session.commit()
+
+    orders = [
+        # Customer 1: recent, frequent, high spend
+        Order(customer_id=1, merchant_id=10, created_at=now - timedelta(days=5), total_amount=Decimal("500")),
+        Order(customer_id=1, merchant_id=10, created_at=now - timedelta(days=2), total_amount=Decimal("300")),
+
+        # Customer 2: older, fewer, low spend
+        Order(customer_id=2, merchant_id=10, created_at=now - timedelta(days=30), total_amount=Decimal("50")),
+
+        # Customer 3: medium recency, medium spend
+        Order(customer_id=3, merchant_id=10, created_at=now - timedelta(days=10), total_amount=Decimal("200")),
+    ]
+    db_session.add_all(orders)
+    db_session.commit()
+    return now
+

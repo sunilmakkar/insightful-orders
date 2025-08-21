@@ -4,7 +4,8 @@ These schemas define the structure and validation rules for incoming
 and outgoing JSON payloads in authentication, customer, and order endpoints.
 """
 
-from marshmallow import Schema, fields, validate
+from marshmallow import Schema, fields, validate, pre_dump
+from datetime import datetime
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 from app.models import AlertRule
 
@@ -25,6 +26,9 @@ class UserSchema(Schema):
     password = fields.String(required=True, load_only=True)
     role = fields.String(required=False)
     merchant_name = fields.String(required=False)
+    merchant_id = fields.Int(dump_only=True)
+
+    debug_marker = fields.String(dump_only=True, dump_default="UserSchema_in_use")
 
 
 # ----------------------------------------------------------------------
@@ -64,6 +68,16 @@ class CustomerSchema(Schema):
     email = fields.Email(load_default=None)
     created_at = fields.DateTime(dump_only=True)
 
+    @pre_dump
+    def ensure_datetime(self, obj, **kwargs):
+        """Ensure created_at is always a datetime before serialization."""
+        if isinstance(obj.created_at, str):
+            try:
+                obj.created_at = datetime.fromisoformat(obj.created_at)
+            except ValueError:
+                obj.created_at = datetime.utcnow()
+        return obj
+
 
 # ----------------------------------------------------------------------
 # Order Schema
@@ -91,7 +105,18 @@ class OrderSchema(Schema):
     )
     currency = fields.Str(validate=validate.Length(equal=3), load_default="BRL")
     total_amount = fields.Decimal(as_string=True, load_default="0.00")
-    created_at = fields.DateTime(dump_only=True)
+    created_at = fields.DateTime(dump_only=True, format="iso")
+
+    @pre_dump
+    def ensure_datetime(self, obj, **kwargs):
+        """Ensure created_at is always a datetime before serialization."""
+        if isinstance(obj.created_at, str):
+            try:
+                obj.created_at = datetime.fromisoformat(obj.created_at)
+            except ValueError:
+                # Fallback: ignore or handle badly formatted strings
+                obj.created_at = datetime.utcnow()
+        return obj
 
 
 # ----------------------------------------------------------------------
@@ -156,6 +181,8 @@ class AlertRuleSchema(SQLAlchemyAutoSchema):
         include_fk = True          # include merchant_id FK
         # (We pass sqla_session at .load(..., session=db.session) in the view)
 
+    threshold = fields.Float(required=True)
+
     # Field-level validation
     metric = auto_field(validate=validate.OneOf(["orders_per_min", "aov_window"]))         
     operator = auto_field(validate=validate.OneOf([">", ">=", "<", "<=", "==", "!="]))
@@ -165,3 +192,23 @@ class AlertRuleSchema(SQLAlchemyAutoSchema):
     id = auto_field(dump_only=True)
     created_at = auto_field(dump_only=True)
     updated_at = auto_field(dump_only=True)
+
+    @pre_dump
+    def ensure_datetimes(self, obj, **kwargs):
+        """Convert str timestamps back to datetime objects before dump."""
+        from datetime import datetime
+
+        if isinstance(obj, dict):
+            for key in ("created_at", "updated_at"):
+                if isinstance(obj.get(key), str):
+                    try:
+                        obj[key] = datetime.fromisoformat(obj[key])
+                    except ValueError:
+                        obj[key] = datetime.utcnow()
+            return obj
+
+        if isinstance(obj.created_at, str):
+            obj.created_at = datetime.fromisoformat(obj.created_at)
+        if isinstance(getattr(obj, "updated_at", None), str):
+            obj.updated_at = datetime.fromisoformat(obj.updated_at)
+        return obj

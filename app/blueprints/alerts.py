@@ -18,7 +18,7 @@ from flask import request
 from flask_jwt_extended import jwt_required
 from flask_sock import Sock
 from flask_smorest import Blueprint  # <-- use smorest so REST endpoints appear in OpenAPI
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, validate
 
 from app.extensions import db, redis_client
 from app.models import AlertRule
@@ -42,11 +42,15 @@ sock = Sock()
 # ----------------------------------------------------------------------
 class AlertRuleCreateSchema(Schema): 
     """Schema for creating a new alert rule (merchant_id injected from JWT)."""
-    metric = fields.Str(required=True, example="orders_per_min")
-    operator = fields.Str(required=True, example=">=")
-    threshold = fields.Float(required=True, example=100.0)
-    time_window_s = fields.Int(required=True, example=300)
-    is_active = fields.Bool(required=False, example=True)
+    metric = fields.Str(required=True, metadata={"example": "orders_per_min"})
+    operator = fields.Str(
+        required=True,
+        validate=validate.OneOf([">", ">=", "<", "<=", "==", "!="]),
+        metadata={"example": ">="},
+    )
+    threshold = fields.Float(required=True, metadata={"example": 100.0})
+    time_window_s = fields.Int(required=True, metadata={"example": 300})
+    is_active = fields.Bool(load_default=True, metadata={"example": True})
 
 class AlertRuleListSchema(Schema):
     """Paginated list wrapper for alert rules."""
@@ -85,7 +89,7 @@ def create_alert_rule(data):
     db.session.add(rule)
     db.session.commit()
 
-    return schema.dump(rule), 201
+    return rule
 
 
 # ----------------------------------------------------------------------
@@ -110,7 +114,6 @@ def list_alert_rules():
 # ----------------------------------------------------------------------
 # WebSocket: Live Alerts
 # ----------------------------------------------------------------------
-@sock.route("/ws/alerts")
 def alerts_socket(ws):
     """
     Subscribe the client to real-time alerts for its merchant.
@@ -145,10 +148,19 @@ def alerts_socket(ws):
             if message["type"] == "message":
                 data = message["data"]
                 if isinstance(data, (bytes, bytearray)):
-                    data = data.decode("utf-8", errors="replace")
-                ws.send(data)
+                    try:
+                        data = data.decode("utf-8")
+                    except Exception:
+                        # fallback: safe JSON string
+                        import json
+                        data = json.dumps({"raw": list(message["data"])})
+                elif not isinstance(data, str):
+                    import json
+                    data = json.dumps(data)
+
+                # ✅ Always send a TEXT frame (str)
+                ws.send(str(data))
     except Exception:
-        # Client likely disconnected; fall through and clean up.
         pass
     finally:
         try:
@@ -156,3 +168,7 @@ def alerts_socket(ws):
             pubsub.close()
         except Exception:
             pass
+
+
+# Register the same function with Flask-Sock
+sock.route("/ws/alerts")(alerts_socket)

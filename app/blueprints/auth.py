@@ -36,6 +36,25 @@ from app.schemas import UserSchema, AuthSchema
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth", description="Auth endpoints")
 
 
+# ----------------------------------------------------------------------
+# Extra response schemas (NEW) so docs show returns
+# ----------------------------------------------------------------------
+from marshmallow import Schema, fields
+
+class MessageSchema(Schema):
+    message = fields.Str(required=True, metadata={"example": "User registered successfully"})
+
+class TokenPairSchema(Schema):
+    access_token = fields.Str(required=True, metadata={"example": "eyJhbGciOiJI..."})
+    refresh_token = fields.Str(required=True, metadata={"example": "eyJhbGciOiJI..."})
+
+class AccessTokenSchema(Schema): 
+    access_token = fields.Str(required=True, metadata={"example": "eyJhbGciOiJI..."})
+
+
+# ----------------------------------------------------------------------
+# Register
+# ----------------------------------------------------------------------
 @auth_bp.route("/register")
 class RegisterUser(MethodView):
     """Register a new user and their merchant.
@@ -48,6 +67,7 @@ class RegisterUser(MethodView):
     """
 
     @auth_bp.arguments(UserSchema)
+    @auth_bp.response(201, MessageSchema)   
     def post(self, user_data):
         """Create user + merchant, hash password, and persist.
 
@@ -78,11 +98,15 @@ class RegisterUser(MethodView):
         return {"message": "User registered successfully"}, 201
 
 
+# ----------------------------------------------------------------------
+# Login
+# ----------------------------------------------------------------------
 @auth_bp.route("/login")
 class LoginUser(MethodView):
     """Authenticate a user by email/password and issue JWTs."""
 
     @auth_bp.arguments(AuthSchema)
+    @auth_bp.response(200, TokenPairSchema)
     def post(self, credentials):
         """Validate credentials and return access/refresh tokens.
 
@@ -112,11 +136,16 @@ class LoginUser(MethodView):
             "refresh_token": refresh_token
         }
 
+
+# ----------------------------------------------------------------------
+# Refresh
+# ----------------------------------------------------------------------
 @auth_bp.route("/refresh")
 class RefreshToken(MethodView):
     """Exchange a valid refresh token for a new access token."""
 
     @jwt_required(refresh=True)
+    @auth_bp.response(200, AccessTokenSchema)
     def post(self):
         """Return a new short-lived access token.
 
@@ -136,11 +165,15 @@ class RefreshToken(MethodView):
         return {"access_token": new_access_token}
 
 
+# ----------------------------------------------------------------------
+# Me
+# ----------------------------------------------------------------------
 @auth_bp.route("/me")
 class MeEndpoint(MethodView):
     """Return details for the currently authenticated user."""
 
     @jwt_required()
+    @auth_bp.response(200, UserSchema)
     def get(self):
         """Fetch the user record for the JWT identity.
 
@@ -155,4 +188,4 @@ class MeEndpoint(MethodView):
         user = db.session.get(User, user_id)
         if not user:
             abort(404, message="User not found")
-        return user.to_dict()
+        return user

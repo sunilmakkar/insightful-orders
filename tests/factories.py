@@ -11,7 +11,7 @@ from faker import Faker
 from passlib.hash import bcrypt
 from app.extensions import db
 from app.models import User, Merchant, Customer, Order
-import datetime as datetime
+from datetime import datetime
 
 fake = Faker()
 
