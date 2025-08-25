@@ -86,7 +86,7 @@ def create_app(config_name: str = "development"):
     # -----------------------------------------------
     # Start Alerts Scheduler
     # -----------------------------------------------
-    if app.config.get("ALERTS_SCHEDULER_ENABLED", True) and not app.config.get("TESTING", False):
+    if app.config.get("ALERTS_SCHEDULER_ENABLED", True):
         if not getattr(app, "_alerts_scheduler_started", False):
             scheduler = BackgroundScheduler(daemon=True)
 
@@ -103,14 +103,17 @@ def create_app(config_name: str = "development"):
                 replace_existing=True,
                 next_run_time=datetime.utcnow(),  # first run immediately
             )
-            scheduler.start()
-            print("[alerts] scheduler.start()", flush=True)
+
+            # 👉 Only actually start the background thread outside of testing
+            if not app.config.get("TESTING", False):
+                scheduler.start()
+                print("[alerts] scheduler.start()", flush=True)
 
             # Keep a handle and mark as started to avoid dupes
             app.extensions["alerts_scheduler"] = scheduler
             app._alerts_scheduler_started = True  # type: ignore[attr-defined]
 
-            # Graceful stop on process exit
-            atexit.register(lambda: scheduler.shutdown(wait=False))
-
+            # Graceful stop on process exit (if running)
+            if not app.config.get("TESTING", False):
+                atexit.register(lambda: scheduler.shutdown(wait=False))
     return app

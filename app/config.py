@@ -104,7 +104,7 @@ class ProdConfig(BaseConfig):
       accidental reuse of dev/test variables in production environments.
     - DEBUG is off to prevent leaking stack traces.
     """
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URI")
+    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
     DEBUG = False
 
 
