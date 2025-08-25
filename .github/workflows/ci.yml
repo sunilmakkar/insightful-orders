@@ -52,12 +52,14 @@ jobs:
       - name: Run migrations
         run: |
           export CONFIG=production
+          export SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@localhost:5432/insightful_orders_test
           flask db upgrade
 
       # Step 5 - Seed demo data
       - name: Seed demo data
         run: |
           export CONFIG=production
+          export SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@localhost:5432/insightful_orders_test
           flask seed-demo
 
       # Step 6 - Run tests
