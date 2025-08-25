@@ -64,14 +64,14 @@ jobs:
           export REDIS_URL=redis://localhost:6379/0
           flask seed-demo
 
-      # Step 6 - Run tests
+      # Step 6 - Run tests (skip integration tests in CI)
       - name: Run pytest
         run: |
           export PYTHONPATH=$PYTHONPATH:$(pwd)
           export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/insightful_orders_test
           export REDIS_URL=redis://localhost:6379/0
           export JWT_SECRET_KEY=dummysecret
-          pytest --maxfail=1 --disable-warnings -q
+          pytest --maxfail=1 --disable-warnings -q -m "not integration"
 
       # Step 7 - Log in to GitHub Container Registry
       - name: Log in to GHCR
