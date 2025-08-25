@@ -116,4 +116,7 @@ def create_app(config_name: str = "development"):
             # Graceful stop on process exit (if running)
             if not app.config.get("TESTING", False):
                 atexit.register(lambda: scheduler.shutdown(wait=False))
+    else:
+        app._alerts_scheduler_started = False
+        
     return app
