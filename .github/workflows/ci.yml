@@ -53,6 +53,7 @@ jobs:
         run: |
           export CONFIG=production
           export SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@localhost:5432/insightful_orders_test
+          export REDIS_URL=redis://localhost:6379/0
           flask db upgrade
 
       # Step 5 - Seed demo data
@@ -60,6 +61,7 @@ jobs:
         run: |
           export CONFIG=production
           export SQLALCHEMY_DATABASE_URI=postgresql://postgres:postgres@localhost:5432/insightful_orders_test
+          export REDIS_URL=redis://localhost:6379/0
           flask seed-demo
 
       # Step 6 - Run tests
