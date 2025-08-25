@@ -87,7 +87,7 @@ class TestConfig(BaseConfig):
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     REDIS_URL = "redis://localhost:6379/0" 
     TESTING = True
-    ALERTS_SCHEDULER_ENABLED = False
+    ALERTS_SCHEDULER_ENABLED = True
 
     JWT_SECRET_KEY = "super-secret-test-key"
     SECRET_KEY = "super-secret-test-key"
