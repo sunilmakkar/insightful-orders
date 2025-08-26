@@ -5,6 +5,7 @@ services:
   # Flask API (Gunicorn, using GHCR image)
   # ----------------------------------------------------------------------
   api:
+    platform: linux/amd64
     image: ghcr.io/sunilmakkar/insightful-orders:latest
     env_file:
       - .env.prod
