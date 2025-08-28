@@ -54,11 +54,12 @@ fake = Faker()
 @with_appcontext
 def seed_demo():
     """
-    Populate the database with a demo merchant, one admin user,
+    Populate the database with a demo merchant, two users,
     80 customers, and 300 orders.
 
     - Creates merchant "DemoStore" if it doesn't exist.
-    - Creates admin user admin@demo.local with password 'demo1234'.
+    - Creates admin user admin@example.com with password 'demo1234'.
+    - Creates integration test user itest@example.com with password 'test1234'.
     - Creates 80 unique customers.
     - Creates 300 orders randomly assigned to these customers.
     """
@@ -75,19 +76,34 @@ def seed_demo():
     # ------------------------------------------------------------------
     # Create admin user if not exists
     # ------------------------------------------------------------------
-    user = User.query.filter_by(email="admin@example.com").first()
-    if not user:
-        user = User(
+    admin = User.query.filter_by(email="admin@example.com").first()
+    if not admin:
+        admin = User(
             merchant_id=merchant.id,
             email="admin@example.com",
             role="admin",
         )
-        user.set_password("yourpassword")  # hashed in model
-        db.session.add(user)
+        admin.set_password("demo1234")  # 🔑 locked for unit tests
+        db.session.add(admin)
     else:
-    # Ensure user belongs to the DemoStore merchant
-        if user.merchant_id != merchant.id:
-            user.merchant_id = merchant.id
+        if admin.merchant_id != merchant.id:
+            admin.merchant_id = merchant.id
+
+    # ------------------------------------------------------------------
+    # Create integration test user if not exists
+    # ------------------------------------------------------------------
+    itest = User.query.filter_by(email="itest@example.com").first()
+    if not itest:
+        itest = User(
+            merchant_id=merchant.id,
+            email="itest@example.com",
+            role="staff",
+        )
+        itest.set_password("test1234")  # 🔑 what pytest expects
+        db.session.add(itest)
+    else:
+        if itest.merchant_id != merchant.id:
+            itest.merchant_id = merchant.id
 
     # ------------------------------------------------------------------
     # Create customers (80 unique)
@@ -127,24 +143,6 @@ def seed_demo():
     # Commit all changes in one transaction
     db.session.commit()
 
-    click.echo(f"Seeded DemoStore: customers={len(customers)} orders={len(orders)}")
-
-
-# ----------------------------------------------------------------------
-# Register custom CLI commands with the app
-# ----------------------------------------------------------------------
-def register_cli(app):
-    """Attach all custom CLI commands to the Flask app."""
-    app.cli.add_command(seed_demo)
-
-
-# Register commands immediately so they work with manage.py
-if app:
-    register_cli(app)
-else:
-    import sys
-    print("❌ ERROR: create_app() returned None. Check app/__init__.py and config.", file=sys.stderr)
-
-
-if __name__ == "__main__":
-    cli()
+    click.echo(
+        f"Seeded DemoStore with users, customers={len(customers)}, orders={len(orders)}"
+    )

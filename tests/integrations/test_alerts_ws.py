@@ -32,8 +32,8 @@ import os
 # ----------------------------------------------------------------------
 # Config / Constants
 # ----------------------------------------------------------------------
-API_BASE = os.getenv("API_BASE", "http://127.0.0.1:5000")
-WS_BASE  = os.getenv("WS_BASE", "ws://127.0.0.1:5000/ws/alerts")
+API_BASE = os.getenv("API_BASE", "http://127.0.0.1:5050")
+WS_BASE  = os.getenv("WS_BASE", "ws://127.0.0.1:5050/ws/alerts")
 
 CONNECT_TIMEOUT_S = 3
 RECV_TIMEOUT_S = 5  # overall deadline for pub/sub delivery
@@ -107,7 +107,8 @@ def _ws_url(token: str | None = None) -> str:
 # Redis Helper
 # ----------------------------------------------------------------------
 def _redis():
-    return redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
+    # Default to host-local if running tests outside Docker
+    return redis.from_url(os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"))
 
 
 # ----------------------------------------------------------------------
