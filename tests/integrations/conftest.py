@@ -20,7 +20,7 @@ from flask_jwt_extended import create_access_token
 def integration_user(app):
     """Seed a dedicated merchant+user for integration tests, reusing global app."""
     with app.app_context():
-        merchant = Merchant(name="IT Store")
+        merchant = Merchant(name="Demo Store")
         db.session.add(merchant)
         db.session.flush()
 

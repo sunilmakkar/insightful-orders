@@ -21,7 +21,18 @@ from flask.cli import FlaskGroup, with_appcontext
 from app import create_app
 from app.extensions import db
 from app.models import Merchant, User, Customer, Order
-from app.extensions import db, migrate 
+from app.extensions import db, migrate
+from dotenv import load_dotenv
+
+
+# ----------------------------------------------------------------------
+# App Bootstrap: Load environment and initialize Flask factory
+# ----------------------------------------------------------------------
+# Try .env.prod first, use .env as fallback
+if os.path.exists(".env.prod"):
+    load_dotenv(".env.prod")
+elif os.path.exists(".env"):
+    load_dotenv(".env")
 
 # Determine config from environment, defaulting to development.
 config_name = os.getenv("CONFIG", "development")

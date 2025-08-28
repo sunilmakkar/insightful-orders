@@ -1,11 +1,39 @@
-version: "3.9"
+# ==========================================================================
+# docker-compose.prod.yml — Production stack for Insightful-Orders
+# - Builds local image
+# - Optional one-off migration job (profile: ops)
+# - API served by Gunicorn via wsgi:application
+# ==========================================================================
 
 services:
   # ----------------------------------------------------------------------
-  # Flask API (Gunicorn, using GHCR image)
+  # Migration Job (one-off) — apply Alembic migrations to Postgres
+  # Run with: docker compose -f docker-compose.prod.yml --profile ops run --rm migrate
+  # ----------------------------------------------------------------------
+  migrate:
+    profiles: ["ops"]
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/sunilmakkar/insightful-orders:latest
+    env_file:
+      - .env.prod
+    environment:
+      - CONFIG=production
+      - PYTHONPATH=/app
+    depends_on:
+      - db
+    command: flask db upgrade
+
+  # ----------------------------------------------------------------------
+  # Flask API — Gunicorn + WSGI entrypoint
   # ----------------------------------------------------------------------
   api:
     platform: linux/amd64
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: ghcr.io/sunilmakkar/insightful-orders:latest
     env_file:
       - .env.prod
@@ -14,23 +42,21 @@ services:
       - PYTHONPATH=/app
       - API_BASE=http://api:5000
       - WS_BASE=ws://api:5000/ws/alerts
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - db
       - redis
     ports:
-      - "5050:5000"  # Expose API on http://localhost:5050
-    command: >
-      gunicorn -b 0.0.0.0:5000 "app:create_app('production')" --workers 4 --threads 2 --timeout 60
+      - "5050:5000"  # http://localhost:5050
+    command: gunicorn -b 0.0.0.0:5000 wsgi:application
 
   # ----------------------------------------------------------------------
   # Postgres Database
   # ----------------------------------------------------------------------
   db:
     image: postgres:15
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+    env_file:
+      - .env.prod          # POSTGRES_* live here
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -39,6 +65,9 @@ services:
   # ----------------------------------------------------------------------
   redis:
     image: redis:7
+    # Host mapping for local tools/curl only; containers use redis:6379
+    ports:
+      - "6380:6379"
 
 # ----------------------------------------------------------------------
 # Named Volumes

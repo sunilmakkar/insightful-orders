@@ -1,0 +1,29 @@
+# ==========================================================================
+# docker-compose.test.yml — Run integration tests inside the compose network
+# - Uses in-network hostnames (api, db, redis) like production
+# - Mounts your working copy so tests are current
+# ==========================================================================
+
+services:
+  tests:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/sunilmakkar/insightful-orders:latest
+    env_file:
+      - .env.prod
+    environment:
+      CONFIG: production
+      PYTHONPATH: /app
+      API_BASE: http://api:5000
+      WS_BASE: ws://api:5000/ws/alerts
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - api
+      - db
+      - redis
+    volumes:
+      - .:/app
+    command: gunicorn -b 0.0.0.0:5000 -w 2 --threads 4 wsgi:application
+

@@ -15,6 +15,11 @@ import pytest
 from app.config import get_config, DevConfig, TestConfig, ProdConfig
 
 def test_get_config_valid_keys():
-    assert get_config("development") is DevConfig
-    assert get_config("testing") is TestConfig
-    assert get_config("production") is ProdConfig
+    assert isinstance(get_config("development"), DevConfig)
+    assert isinstance(get_config("testing"), TestConfig)
+    assert isinstance(get_config("production"), ProdConfig)
+
+
+def test_get_config_invalid_key():
+    with pytest.raises(RuntimeError):
+        get_config("invalid-env")

@@ -104,9 +104,8 @@ class ProdConfig(BaseConfig):
       accidental reuse of dev/test variables in production environments.
     - DEBUG is off to prevent leaking stack traces.
     """
-    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
     DEBUG = False
-
+    SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI")
 
 # ----------------------------------------------------------------------
 # Get Config
@@ -119,6 +118,6 @@ def get_config(name: str):
         "production": ProdConfig
     }
     try:
-        return config_map[name]
+        return config_map[name]()
     except KeyError:
         raise RuntimeError(f"Invalid config name: {name}")

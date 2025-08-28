@@ -25,9 +25,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.services.alerts import evaluate_rules 
 from datetime import datetime
 import atexit
+import os
+
+# 🔥 Global safety net: force env var into Flask's default config
+if os.environ.get("SQLALCHEMY_DATABASE_URI"):
+    Flask.config_class.SQLALCHEMY_DATABASE_URI = os.environ["SQLALCHEMY_DATABASE_URI"]
 
 
-def create_app(config_name: str = "development"):
+def create_app(config_name: str = None, *args, **kwargs):
     """
     Application factory for Insightful-Orders.
 
@@ -38,15 +43,25 @@ def create_app(config_name: str = "development"):
     # Create Flask app instance
     app = Flask(__name__)
 
-    # Load configuration settings (based on config_name)
-    app.config.from_object(get_config(config_name))
+    # Pick config: use argument first, then fallback to env var, then default
+    config_name = config_name or os.environ.get("CONFIG", "development")
+
+    # Load configuration settings (based on config_obj)
+    config_obj = get_config(config_name)
+    app.config.from_object(config_obj)
+
+    # 🔎 Debug
+    print("ENV SQLALCHEMY_DATABASE_URI:", os.environ.get("SQLALCHEMY_DATABASE_URI"))
+    print("CONFIG SQLALCHEMY_DATABASE_URI:", app.config.get("SQLALCHEMY_DATABASE_URI"))
+
+
 
     # ------------------------------------------------------------------
     # Initialize Extensions
     # ------------------------------------------------------------------
     db.init_app(app)                # SQLAlchemy ORM
 
-    # ✅ Auto-create tables if using SQLite (for local/dev/demo only)
+    # Auto-create tables if using SQLite (for local/dev/demo only)
     if app.config["SQLALCHEMY_DATABASE_URI"].startswith("sqlite"):
         with app.app_context():
             db.create_all()

@@ -1,0 +1,24 @@
+# Source control & metadata
+.git
+.gitignore
+
+# Bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Test-related
+tests/
+htmlcov
+.coverage
+.pytest_cache
+.mypy_cache
+
+# Local configs
+instance/
+docker-compose*.yml
+
+# Secrets (always excluded)
+.env
+.env.prod
