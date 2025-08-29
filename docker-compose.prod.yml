@@ -67,7 +67,8 @@ services:
     image: redis:7
     # Host mapping for local tools/curl only; containers use redis:6379
     ports:
-      - "6380:6379"
+      - "6380:6379" # prod-style (pytest with make test-prod)
+      - "6379:6379" # dev-style (pytest with make test-dev)
 
 # ----------------------------------------------------------------------
 # Named Volumes

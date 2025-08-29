@@ -107,8 +107,8 @@ def _ws_url(token: str | None = None) -> str:
 # Redis Helper
 # ----------------------------------------------------------------------
 def _redis():
-    # Default to host-local if running tests outside Docker
     return redis.from_url(os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0"))
+
 
 
 # ----------------------------------------------------------------------
