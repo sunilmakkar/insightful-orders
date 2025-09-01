@@ -11,10 +11,10 @@ services:
       - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - CONFIG=${CONFIG}
-      - REDIS_URL=${REDIS_URL}
       - PYTHONPATH=/app   
       - API_BASE=http://api:5000
       - WS_BASE=ws://api:5000/ws/alerts
+      - REDIS_URL=redis://redis:6379/0
       
     depends_on:
       - db     # Wait for Postgres to be healthy before starting

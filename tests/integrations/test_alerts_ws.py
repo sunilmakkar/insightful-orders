@@ -16,17 +16,18 @@ import json
 import time
 import os
 import redis
+import asyncio
 
 import pytest
 from urllib import request as urlreq, error as urlerr
+from websockets import connect
+from app.utils.helpers import alerts_channel_for_merchant
+
 from websocket import (
     create_connection,
-    WebSocketBadStatusException,
     WebSocketConnectionClosedException,
     WebSocketTimeoutException,
 )
-from app.utils.helpers import alerts_channel_for_merchant
-import os
 
 
 # ----------------------------------------------------------------------
@@ -161,36 +162,33 @@ def test_ws_handshake_rejects_without_token():
 def test_pubsub_message_flows_to_client():
     """Publishing to the merchant channel should be received by the connected client."""
     token = _login_get_token()
-
-    # Get merchant_id from the real API
     me = _http_get_json("/auth/me", token)
     merchant_id = me.get("merchant_id")
-    assert isinstance(merchant_id, int), f"/auth/me missing merchant_id: {me}"
+    assert isinstance(merchant_id, int)
 
-    ws = create_connection(_ws_url(token), timeout=CONNECT_TIMEOUT_S, compression=None)
-    try:
-        assert ws.connected is True
+    payload = {"event": "itest", "ok": True, "merchant_id": merchant_id}
+    channel = alerts_channel_for_merchant(merchant_id)
 
-        # Give the server a moment to attach the Redis subscription.
-        time.sleep(1.0)
+    async def run_test():
+        uri = f"{WS_BASE}?token={token}"
+        async with connect(uri, max_size=None) as ws:
+            await asyncio.sleep(1.0)
 
-        payload = {"event": "itest", "ok": True, "merchant_id": merchant_id}
-        channel = alerts_channel_for_merchant(merchant_id)
+            # publish via redis
+            _redis().publish(channel, json.dumps(payload))
 
-        _redis().publish(channel, json.dumps(payload))
+            # try for up to RECV_TIMEOUT_S seconds
+            data = None
+            for _ in range(int(RECV_TIMEOUT_S * 2)):  # e.g. 10 short tries
+                try:
+                    text = await asyncio.wait_for(ws.recv(), timeout=0.5)
+                    candidate = json.loads(text)
+                    if candidate == payload:
+                        data = candidate
+                        break
+                except asyncio.TimeoutError:
+                    continue
 
-        # Poll until RECV_TIMEOUT_S with short increments
-        deadline = time.time() + (RECV_TIMEOUT_S * 2)  
-        ws.settimeout(0.5)
-        data = None
-        while time.time() < deadline:
-            try:
-                text = ws.recv()
-                data = json.loads(text)
-                break
-            except WebSocketTimeoutException:
-                continue
+            assert data == payload, f"Did not receive pubsub payload in {RECV_TIMEOUT_S}s"
 
-        assert data == payload, f"Did not receive pubsub payload in {RECV_TIMEOUT_S}s"
-    finally:
-        ws.close()
+    asyncio.run(run_test())
