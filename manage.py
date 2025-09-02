@@ -48,6 +48,24 @@ fake = Faker()
 
 
 # ----------------------------------------------------------------------
+# CLI Command: reset-demo
+# ----------------------------------------------------------------------
+@click.command("reset-demo")
+@with_appcontext
+def reset_demo():
+    """
+    Wipe all demo data: merchants, users, customers, orders.
+    Use this before reseeding to avoid duplicates.
+    """
+    Order.query.delete()
+    Customer.query.delete()
+    User.query.delete()
+    Merchant.query.delete()
+    db.session.commit()
+    click.echo("All demo data removed.")
+
+
+# ----------------------------------------------------------------------
 # CLI Command: seed-demo
 # ----------------------------------------------------------------------
 @click.command("seed-demo")
@@ -85,25 +103,34 @@ def seed_demo():
         )
         admin.set_password("demo1234")  # 🔑 locked for unit tests
         db.session.add(admin)
-    else:
-        if admin.merchant_id != merchant.id:
-            admin.merchant_id = merchant.id
+        admin.merchant_id = merchant.id
+        admin.set_password("demo1234")
 
     # ------------------------------------------------------------------
     # Create integration test user if not exists
     # ------------------------------------------------------------------
+    click.echo(f"DEBUG: itest before insert = {User.query.filter_by(email='itest@example.com').first()}")  # NEW DEBUG LINE
+
     itest = User.query.filter_by(email="itest@example.com").first()
     if not itest:
         itest = User(
             merchant_id=merchant.id,
             email="itest@example.com",
-            role="staff",
+            role="admin",
         )
         itest.set_password("test1234")  # 🔑 what pytest expects
         db.session.add(itest)
-    else:
-        if itest.merchant_id != merchant.id:
-            itest.merchant_id = merchant.id
+        itest.merchant_id = merchant.id
+        itest.set_password("test1234")
+
+    click.echo(f"DEBUG: itest after insert = {User.query.filter_by(email='itest@example.com').first()}")  # NEW DEBUG LINE  
+    # ------------------------------------------------------------------
+    # Clear existing demo customers/orders (NEW)
+    # ------------------------------------------------------------------
+    Customer.query.delete()
+    Order.query.delete()
+    db.session.flush()
+
 
     # ------------------------------------------------------------------
     # Create customers (80 unique)
@@ -146,3 +173,8 @@ def seed_demo():
     click.echo(
         f"Seeded DemoStore with users, customers={len(customers)}, orders={len(orders)}"
     )
+
+
+# Register commands with Flask CLI
+cli.add_command(seed_demo)
+cli.add_command(reset_demo)
