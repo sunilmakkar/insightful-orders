@@ -140,6 +140,16 @@ def seed_demo():
     users = User.query.all()
     click.echo(f"DEBUG: Users in DB after commit: {[u.email for u in users]}")
 
+
+    # ------------------------------------------------------------------
+    # CLEAR old customers + orders before reseeding
+    # This avoids IntegrityError from duplicate emails (CHANGED SECTION)
+    # ------------------------------------------------------------------
+    click.echo("DEBUG: wiping old customers and orders...")
+    Order.query.delete()
+    Customer.query.delete()
+    db.session.commit()
+
     # ------------------------------------------------------------------
     # Create customers (80 unique)
     # ------------------------------------------------------------------
