@@ -109,8 +109,6 @@ def seed_demo():
     # ------------------------------------------------------------------
     # Create integration test user if not exists
     # ------------------------------------------------------------------
-    click.echo(f"DEBUG: itest before insert = {User.query.filter_by(email='itest@example.com').first()}")  # NEW DEBUG LINE
-
     itest = User.query.filter_by(email="itest@example.com").first()
     if not itest:
         itest = User(
@@ -118,12 +116,11 @@ def seed_demo():
             email="itest@example.com",
             role="admin",
         )
-        itest.set_password("test1234")  # 🔑 what pytest expects
         db.session.add(itest)
-        itest.merchant_id = merchant.id
-        itest.set_password("test1234")
 
-    click.echo(f"DEBUG: itest after insert = {User.query.filter_by(email='itest@example.com').first()}")  # NEW DEBUG LINE  
+    # always enforce these
+    itest.merchant_id = merchant.id
+    itest.set_password("test1234")
     # ------------------------------------------------------------------
     # Clear existing demo customers/orders (NEW)
     # ------------------------------------------------------------------
