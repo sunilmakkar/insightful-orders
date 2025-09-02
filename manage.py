@@ -124,12 +124,6 @@ def seed_demo():
 
     # Commit users right away to force errors
     db.session.commit()
-    # ------------------------------------------------------------------
-    # Clear existing demo customers/orders (NEW)
-    # ------------------------------------------------------------------
-    Customer.query.delete()
-    Order.query.delete()
-    db.session.flush()
 
 
     # ------------------------------------------------------------------
@@ -169,12 +163,3 @@ def seed_demo():
 
     # Commit all changes in one transaction
     db.session.commit()
-
-    click.echo(
-        f"Seeded DemoStore with users, customers={len(customers)}, orders={len(orders)}"
-    )
-
-
-# Register commands with Flask CLI
-cli.add_command(seed_demo)
-cli.add_command(reset_demo)
