@@ -187,3 +187,10 @@ def seed_demo():
 
     # Commit all changes in one transaction
     db.session.commit()
+
+# Register commands on the FlaskGroup
+cli.add_command(reset_demo)
+cli.add_command(seed_demo)
+
+if __name__ == "__main__":
+    cli()
