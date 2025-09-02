@@ -103,12 +103,13 @@ def seed_demo():
         )
         admin.set_password("demo1234")  # 🔑 locked for unit tests
         db.session.add(admin)
-        admin.merchant_id = merchant.id
-        admin.set_password("demo1234")
+    admin.merchant_id = merchant.id
+    admin.set_password("demo1234")
 
     # ------------------------------------------------------------------
     # Create integration test user if not exists
     # ------------------------------------------------------------------
+    click.echo("DEBUG: about to create or update itest@example.com")
     itest = User.query.filter_by(email="itest@example.com").first()
     if not itest:
         itest = User(
@@ -117,10 +118,12 @@ def seed_demo():
             role="admin",
         )
         db.session.add(itest)
-
-    # always enforce these
     itest.merchant_id = merchant.id
     itest.set_password("test1234")
+    click.echo(f"DEBUG: itest object in session = {itest}")
+
+    # Commit users right away to force errors
+    db.session.commit()
     # ------------------------------------------------------------------
     # Clear existing demo customers/orders (NEW)
     # ------------------------------------------------------------------
