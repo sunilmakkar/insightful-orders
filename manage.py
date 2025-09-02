@@ -122,9 +122,23 @@ def seed_demo():
     itest.set_password("test1234")
     click.echo(f"DEBUG: itest object in session = {itest}")
 
-    # Commit users right away to force errors
-    db.session.commit()
+    # ------------------------------------------------------------------
+    # Commit admin + itest
+    # ------------------------------------------------------------------
+    click.echo("DEBUG: committing admin + itest users...")
+    try:
+        db.session.commit()
+        click.echo("DEBUG: commit succeeded")
+    except Exception as e:
+        click.echo(f"DEBUG: commit failed with error: {e}")
+        db.session.rollback()
 
+
+    # ------------------------------------------------------------------
+    # Debug: check what’s actually in DB immediately
+    # ------------------------------------------------------------------
+    users = User.query.all()
+    click.echo(f"DEBUG: Users in DB after commit: {[u.email for u in users]}")
 
     # ------------------------------------------------------------------
     # Create customers (80 unique)
