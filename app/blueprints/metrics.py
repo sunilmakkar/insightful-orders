@@ -72,11 +72,12 @@ class RollingAOVResource(MethodView):
     @metrics_bp.arguments(AOVQuerySchema, location="query") 
     @metrics_bp.response(200, RollingAOVSchema)
     @jwt_required()
-    def get(self, args):   # <-- FIXED: only one get() method
+    def get(self, args):
         """
         Return the Average Order Value over a rolling time window.
+        If no orders match, return a graceful 0-response instead of 404.
         """
-        window = args.get("window", "30d")   # <-- use parsed args, not request.args
+        window = args.get("window", "30d")
         claims = get_jwt()
         merchant_id = claims.get("merchant_id")
         if not merchant_id:
@@ -84,6 +85,17 @@ class RollingAOVResource(MethodView):
 
         session: Session = db.session
         result = rolling_aov(session, merchant_id, window)
+
+        # Graceful fallback: if rolling_aov returns None or empty
+        if not result or result.get("orders", 0) == 0:
+            return {
+                "window": window,
+                "from": None,
+                "to": None,
+                "orders": 0,
+                "aov": 0.0
+            }
+
         return result
 
 
@@ -109,17 +121,23 @@ class RFMSchema(Schema):
 class RFMResource(MethodView):
     @metrics_bp.response(200, RFMSchema(many=True))
     @jwt_required()
-    def get(self):   # <-- no args schema, so just self
+    def get(self):
         """
         Return Recency-Frequency-Monetary scores for all customers of this merchant.
+        If no customers/orders exist, return an empty list instead of 404.
         """
         claims = get_jwt()
         merchant_id = claims.get("merchant_id")
         if not merchant_id:
             return {"message": "Missing merchant_id in token"}, 400
-        
+
         session: Session = db.session
         results = rfm_scores(session, merchant_id)
+
+        # Graceful fallback
+        if not results:
+            return []
+
         return results
 
 
@@ -145,7 +163,8 @@ class CohortsResource(MethodView):
     @jwt_required()
     def get(self, args):
         """
-        Return monthly cohort retention matrix.
+        Return monthly cohort retention matrix for this merchant.
+        If no data exists, return an empty matrix instead of 404.
         """
         claims = get_jwt()
         merchant_id = claims.get("merchant_id")
@@ -157,4 +176,13 @@ class CohortsResource(MethodView):
 
         session: Session = db.session
         result = monthly_cohorts(session, merchant_id, start=start_q, end=end_q)
+
+        # Graceful fallback
+        if not result or not result.get("cohorts"):
+            return {
+                "start": start_q.strftime("%Y-%m") if start_q else None,
+                "end": end_q.strftime("%Y-%m") if end_q else None,
+                "cohorts": []
+            }
+
         return result
