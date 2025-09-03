@@ -194,6 +194,7 @@ def bulk_create_orders(payload):
             total_amount=item["total_amount"],
         )
         db.session.add(order)
+        db.session.flush()
         created.append(order)
 
     db.session.commit()
