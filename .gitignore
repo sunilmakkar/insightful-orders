@@ -19,3 +19,6 @@ venv/
 
 # VS Code
 .vscode/
+
+# Data files
+data/
