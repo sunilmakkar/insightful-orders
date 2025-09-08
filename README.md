@@ -33,144 +33,189 @@ Flask 3 • Flask-Smorest • Marshmallow • SQLAlchemy 2 • Alembic • Postg
 
 ```
 insightful-orders/
-├─ app/                                   # Flask application package
-│  ├─ __init__.py                         # App factory + scheduler bootstrap
-│  ├─ cli.py                              # Flask CLI entrypoint + commands
-│  ├─ config.py                           # Dev/Test/Prod config classes
-│  ├─ extensions.py                       # db, ma, jwt, migrate, redis_client
-│  ├─ models.py                           # SQLAlchemy models
-│  ├─ schemas.py                          # Marshmallow schemas (request/response)
-│  ├─ blueprints/                         # HTTP/WS route modules
-│  │  ├─ auth.py                          # /auth register/login/refresh/me
-│  │  ├─ metrics.py                       # /metrics aov | rfm | cohorts
-│  │  ├─ orders.py                        # /orders list/bulk-create/get/delete
-│  │  └─ alerts.py                        # /alerts create/list + /alerts/ws (WebSocket)
-│  ├─ services/                           # Domain/business logic
-│  │  ├─ analytics.py                     # KPI computations (AOV, RFM, cohorts)
-│  │  └─ alerts.py                        # Rule evaluation + Redis publish
-│  ├─ utils/                              # Helpers/utilities
-│  │  ├─ __init__.py                      # Marks utils as a package
-│  │  ├─ auth.py                          # JWT helpers (merchant_id extraction)
-│  │  └─ helpers.py                       # paginate(), parse_*(), channel helpers
+├─ .github/workflows/                 # CI/CD pipelines
+│  └─ ci.yml                          # Test + build + push Docker image
+│
+├─ app/                               # Flask application package
+│  ├─ __init__.py                     # App factory + scheduler bootstrap
+│  ├─ cli.py                          # Flask CLI entrypoint + commands
+│  ├─ config.py                       # Dev/Test/Prod config classes
+│  ├─ extensions.py                   # db, ma, jwt, migrate, redis_client
+│  ├─ models.py                       # SQLAlchemy models
+│  ├─ schemas.py                      # Marshmallow schemas
+│  ├─ blueprints/                     # HTTP/WS route modules
+│  │  ├─ auth.py                      # /auth register/login/refresh/me
+│  │  ├─ health.py                    # /health check
+│  │  ├─ metrics.py                   # /metrics aov | rfm | cohorts
+│  │  ├─ orders.py                    # /orders list/bulk-create/get/delete
+│  │  └─ alerts.py                    # /alerts create/list + /alerts/ws
+│  ├─ services/                       # Domain/business logic
+│  │  ├─ analytics.py                 # KPI computations (AOV, RFM, cohorts)
+│  │  └─ alerts.py                    # Rule evaluation + Redis publish
+│  ├─ utils/                          # Helpers/utilities
+│  │  ├─ auth.py                      # JWT helpers (merchant_id extraction)
+│  │  └─ helpers.py                   # paginate(), parse_*(), channel helpers
 │  ├─ static/
-│  │  └─ alerts.html                      # Minimal browser WS client (dev tool)
+│  │  └─ alerts.html                  # Minimal browser WS client (dev tool)
 │  └─ tools/
-│     └─ ws_listen.py                     # CLI WebSocket listener (dev tool)
+│     └─ ws_listen.py                 # CLI WebSocket listener (dev tool)
 │
-├─ docs/
-│  ├─ architecture.md                     # Mermaid architecture diagram
-│  ├─ redoc-api-docs.png                  # Redoc snapshot
-│  └─ swagger-docs.png                    # Swagger snapshot
+├─ data/sample/                       # Olist demo dataset CSVs
+│  ├─ olist_customers_dataset.csv
+│  ├─ olist_orders_dataset.csv
+│  ├─ olist_order_items_dataset.csv
+│  ├─ olist_order_payments_dataset.csv
+│  ├─ olist_order_reviews_dataset.csv
+│  ├─ olist_products_dataset.csv
+│  ├─ olist_sellers_dataset.csv
+│  └─ product_category_name_translation.csv
 │
-├─ tests/                                 # Test suites (unit, routes, integrations)
-│  ├─ integrations/                       # Integration tests (DB + app context)
-│  │  ├─ conftest.py
-│  │  ├─ test_alerts_ws.py                # WS handshake + pub/sub delivery
-│  │  ├─ test_metrics_endpoints.py        # /metrics endpoints auth + happy paths
-│  │  ├─ test_orders_blueprint.py         # /orders blueprint (pagination, bulk, 403s)
-│  │  └─ test_orders_edges.py             # Edge cases for /orders
-│  ├─ routes/                             # Route smoke tests
-│  │  ├─ test_docs.py                     # OpenAPI docs reachable (/api/docs, /api/redoc)
-│  │  └─ test_metrics_rfm.py              # /metrics/rfm route shape assertions
-│  └─ unit/                               # Pure unit tests (no DB/Redis)
-│     ├─ conftest.py                      # SQLite test app + fixtures
-│     ├─ factories.py                     # Factory Boy models
-│     ├─ test_auth.py                     # Auth flow unit tests
-│     ├─ test_alerts.py                   # Alerts predicates + evaluate_rules()
-│     ├─ test_analytics_aov.py            # rolling_aov() unit tests
-│     ├─ test_analytics_cohorts.py        # monthly_cohorts() unit tests
-│     ├─ test_analytics_edge.py           # Edge cases for analytics (NaNs, 0, etc.)
-│     ├─ test_analytics_rfm.py            # rfm_scores() unit tests
-│     ├─ test_app_init.py                 # App factory init coverage
-│     ├─ test_cli.py                      # CLI coverage (manage.py, custom cmds)
-│     ├─ test_services_alerts.py          # Unit test for services/alerts.py
-│     ├─ test_utils_auth.py               # Unit test for utils/auth.py
-│     └─ test_utils_helpers.py            # Unit test for utils/helpers.py
+├─ docker/                            # Container orchestration scripts
+│  └─ entrypoint.sh
 │
-├─ .env                                   # Local environment overrides (ignored in git)
-├─ .gitignore                             # VCS ignores
-├─ .pre-commit-config.yml                 # Linting + secrets hooks
-├─ docker-compose.yml                     # Dev stack: api + db + redis
-├─ Dockerfile                             # API image (Python 3.11-slim)
-├─ LICENSE                                # MIT license
-├─ manage.py                              # Flask CLI entrypoint
-├─ pytest.ini                             # Pytest config/markers/warnings
-├─ README.md                              # This file
-└─ requirements.txt                       # Python dependencies
+├─ docs/                              # Architecture + API docs + screenshots
+│  ├─ architecture.md                 # Mermaid diagram
+│  ├─ insightful-orders-docs-1.png    # Swagger screenshot 1
+│  ├─ docs-2.png                      # Swagger screenshot 2
+│  ├─ docs-3.png                      # Swagger screenshot 3
+│  ├─ fly.io-1.png                    # Fly.io dashboard screenshot 1
+│  ├─ fly.io-2.png                    # Fly.io dashboard screenshot 2
+│  └─ redocs-1.png                    # ReDoc screenshot
+│
+├─ htmlcov/                           # Coverage reports (gitignored in CI)
+│  └─ index.html
+│
+├─ instance/                          # Instance configs (ignored in git)
+│
+├─ migrations/                        # Alembic migrations
+│  └─ versions/                       # Migration scripts
+│
+├─ scripts/                           # Data loading + utilities
+│  ├─ downsample_olist.py
+│  └─ seed_olist_subset.py
+│
+├─ tests/                             # Test suites (unit, routes, integrations)
+│  ├─ integrations/                   # Integration tests (DB + app context)
+│  │  ├─ test_alerts_ws.py
+│  │  ├─ test_metrics_endpoints.py
+│  │  ├─ test_orders_blueprint.py
+│  │  ├─ test_orders_edges.py
+│  │  └─ test_orders.py
+│  ├─ routes/                         # Route smoke tests
+│  │  ├─ test_docs.py
+│  │  └─ test_metrics_rfm.py
+│  └─ unit/                           # Pure unit tests (no DB/Redis)
+│     ├─ factories.py
+│     ├─ test_auth.py
+│     ├─ test_alerts.py
+│     ├─ test_analytics_aov.py
+│     ├─ test_analytics_cohorts.py
+│     ├─ test_analytics_edge.py
+│     ├─ test_analytics_rfm.py
+│     ├─ test_app_init.py (+ cov/edge/errorhandlers/scheduler variants)
+│     ├─ test_cli.py (+ cov/seed_demo variants)
+│     ├─ test_orders_validation.py
+│     ├─ test_schemas_cov*.py
+│     ├─ test_services_alerts.py
+│     ├─ test_utils_auth.py
+│     └─ test_utils_helpers.py
+│
+├─ .env / .env.prod                   # Environment configs (ignored in git)
+├─ docker-compose.yml                 # Dev stack: api + db + redis
+├─ docker-compose.prod.yml            # Production stack
+├─ docker-compose.test.yml            # CI/test stack
+├─ Dockerfile                         # API image (Python 3.11-slim)
+├─ fly.toml                           # Fly.io deployment config
+├─ Makefile                           # Dev/test helpers (make test, etc.)
+├─ manage.py                          # Flask CLI entrypoint
+├─ pytest.ini                         # Pytest config/markers/warnings
+├─ requirements.txt                   # Python dependencies
+├─ wsgi.py                            # WSGI entrypoint (prod servers)
+└─ README.md                          # This file
 ```
 
 ## ✅ Prerequisites
 
 - Docker & Docker Compose
 - (For demo data) Kaggle API credentials:
-  - Add `KAGGLE_USERNAME` and `KAGGLE_KEY` to `.env`  
-  - The script `scripts/fetch_olist_data.sh` uses them to download the dataset.
+  - Add `KAGGLE_USERNAME` and `KAGGLE_KEY` to `.env`
+  - The script `scripts/downsample_olist.py` generates a 2,000-order sample
+  - The script `scripts/seed_olist_subset.py` loads the subset into Postgres
 
 ## 🚀 Quick Start
 
 ### 1) Env & Data
-```cp .env.example .env   # set secrets + DB/Redis URLs (or rely on compose defaults)
-./scripts/fetch_olist_data.sh
+```
+cp .env.example .env   # set secrets + DB/Redis URLs (or rely on compose defaults)
+python scripts/downsample_olist.py
 ```
 
 ### 2) Up The Stack
 ```
-docker compose up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### 3) Seed Demo Data
 ```
-docker compose exec api python scripts/seed_olist_demo.py --merchant DemoStore
+docker compose exec api python scripts/seed_olist_subset.py --merchant "Default Store"
 ```
 
 ### 4) Open API Docs
 
-Swagger UI -> http://localhost:5050/api/docs
+Swagger UI -> https://insightful-orders.fly.dev/api/docs
 
-Redoc -> http://localhost:5050/api/redoc
+Redoc -> https://insightful-orders.fly.dev/api/redoc
 
 ## cURL Example Flow
 
 ### 🔐 Auth Flow (JWT)
 
 **Register**
-```curl -X POST http://localhost:5050/auth/register \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@example.com","password":"yourpassword","merchant_name":"DemoStore"}'
+```curl -X POST https://insightful-orders.fly.dev/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "olist_demo@example.com",
+    "password": "your_password",
+    "role": "admin",
+    "merchant_name": "Default Store"
+  }'
 ```
 
 **Login -> Tokens**
 ```
-curl -s -X POST http://localhost:5050/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@example.com","password":"yourpassword"}'
-# → { "access_token": "...", "refresh_token": "..." }
+curl -X POST https://insightful-orders.fly.dev/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "olist_demo@example.com", "password": "your_password"}'
 ```
 
 **Use the Token**
 ```
-TOKEN=eyJ...   # paste access_token
-curl -H "Authorization: Bearer $TOKEN" http://localhost:5050/auth/me
+TOKEN="eyJhbGciOi..."   # copy from login response
+```
+
+**Verify Orders were Seeded**
+```curl "https://insightful-orders.fly.dev/orders?page=1&page_size=5" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 📊 Metrics Examples
 
 **AOV (Rolling Window)**
 ```
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:5050/metrics/aov?window=30d"
+curl "https://insightful-orders.fly.dev/metrics/aov?window=30d" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **RFM**
 ```
-curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:5050/metrics/rfm
+curl "https://insightful-orders.fly.dev/metrics/rfm" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 **Cohorts**
 ```
-curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:5050/metrics/cohorts?from=2024-01&to=2024-06"
+curl "https://insightful-orders.fly.dev/metrics/cohorts?from=2017-01&to=2018-12" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 🧾 Orders
@@ -178,7 +223,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 **List (Paginated)**
 ```
 curl -H "Authorization: Bearer $TOKEN" \
-  "http://localhost:5050/orders?page=1&page_size=20"
+  "https://insightful-orders.fly.dev/orders?page=1&page_size=20"
 ```
 
 **Bulk Create**
@@ -196,7 +241,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
           }
         ]
       }' \
-  http://localhost:5050/orders
+  https://insightful-orders.fly.dev/orders
 ```
 
 ### 🚨 Real-Time Alerts
@@ -205,7 +250,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 ```
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"metric":"orders_per_min","operator":">","threshold":5,"time_window_s":60,"is_active":true}' \
-  http://localhost:5050/alerts
+  https://insightful-orders.fly.dev/alerts
 ```
 
 **Subscribe (Browser UI)**
@@ -221,31 +266,61 @@ Server will push JSON messages when rules are triggered.
 
 ## ⚙️ Configuration
 
-| Key                       | Example                                    | Description                              |
-| ------------------------- | ------------------------------------------ | ---------------------------------------- |
-| `SQLALCHEMY_DATABASE_URI` | `postgresql+psycopg2://...`                | App DB connection string                 |
-| `DATABASE_URI`            | `postgresql+psycopg2://...`                | **Prod** DB URI (distinct from dev/test) |
-| `JWT_SECRET_KEY`          | `supersecret`                              | JWT signing key                          |
-| `REDIS_URL`               | `redis://redis:6379/0`                     | Redis connection                         |
-| `CONFIG`                  | `development` \| `testing` \| `production` | Chooses config class                     |
-| `KAGGLE_USERNAME`         | `your_kaggle_username`                     | For `fetch_olist_data.sh`                |
-| `KAGGLE_KEY`              | `your_kaggle_key`                          | For `fetch_olist_data.sh`                |
+| Key                       | Example                                    | Description                                                                         |
+| ------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------|
+| `SQLALCHEMY_DATABASE_URI` | `postgresql+psycopg2://...`                | App DB connection string                                                            |
+| `DATABASE_URI`            | `postgresql+psycopg2://...`                | **Prod** DB URI (distinct from dev/test)                                            |
+| `JWT_SECRET_KEY`          | `supersecret`                              | JWT signing key                                                                     |
+| `REDIS_URL`               | `redis://redis:6379/0`                     | Redis connection                                                                    |
+| `CONFIG`                  | `development` \| `testing` \| `production` | Chooses config class                                                                |
+| `KAGGLE_USERNAME`         | `your_kaggle_username`                     | For Olist demo scripts (`downsample_olist.py`, `seed_olist_subset.py`)              |
+| `KAGGLE_KEY`              | `your_kaggle_key`                          | For Olist demo scripts (`downsample_olist.py`, `seed_olist_subset.py`)              |
 
 ### 🧪 Testing
 ```
-docker compose exec api pytest -ra
-# Example result: 39 passed in ~6s
+# Run all tests with coverage
+make test
+
+# Run tests against dev stack
+make test-dev
+
+# Run tests against prod stack
+make test-prod
+
+# Example result: 82 passed in ~15s
+```
+
+**SQL Verification (Fly Postgres)**
+```
+fly pg connect -a insightful-orders-db
+\c insightful_orders
+
+-- Verify merchant exists
+SELECT id, name FROM merchants;
+
+-- Verify seeded user exists
+SELECT id, email, merchant_id FROM users WHERE email = 'olist_demo@example.com';
+
+-- Verify orders seeded
+SELECT COUNT(*) AS total_orders,
+       COUNT(DISTINCT customer_id) AS unique_customers
+FROM orders
+WHERE merchant_id = (SELECT id FROM merchants WHERE name = 'Default Store');
 ```
 
 ## 📖 API Documentation
 
 Insightful-Orders ships with auto-generated OpenAPI docs:
 
-- **Swagger UI (interactive)** → [http://localhost:5050/api/docs](http://localhost:5050/api/docs)
-- **ReDoc (reference)** → [http://localhost:5050/api/redoc](http://localhost:5050/api/redoc)
+- **Swagger UI (interactive)** → [https://insightful-orders.fly.dev/api/docs](https://insightful-orders.fly.dev/api/docs)
+- **ReDoc (reference)** → [https://insightful-orders.fly.dev/api/redoc](https://insightful-orders.fly.dev/api/redoc)
 
-![Swagger Screenshot](docs/swagger-docs.png)
-![ReDoc Screenshot](docs/redoc-api-docs.png)
+![Swagger Screenshot 1](docs/insightful-orders-docs-1.png)
+![Swagger Screenshot 2](docs/docs-2.png)
+![Swagger Screenshot 3](docs/docs-3.png)
+![Fly.io Screenshot 1](docs/fly.io-1.png)
+![Fly.io Screenshot 2](docs/fly.io-2.png)
+![ReDoc Screenshot](docs/redocs-1.png)
 
 ## 🛠️ Dev / Ops Notes
 
