@@ -69,7 +69,7 @@ class CustomerFactory(BaseFactory):
         return super()._create(model_class, *args, **kwargs)
 
     merchant = factory.SubFactory(MerchantFactory)
-    email = factory.LazyAttribute(lambda _: fake.email())
+    email = factory.Sequence(lambda n: f"user{n}@example.com")
     first_name = factory.LazyAttribute(lambda _: fake.first_name())
     last_name = factory.LazyAttribute(lambda _: fake.last_name())
     external_id = factory.LazyAttribute(lambda _: fake.uuid4())
